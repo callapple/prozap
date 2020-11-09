@@ -1,0 +1,312 @@
+ LST ON,NOASYM
+ SBTL +David G. Sparks, Waterloo, Iowa+ 
+ REP 32
+*                              *
+*     Hex/ASCII Dump and       *
+*   Disassembler Utility  by   *
+* Val J Golding, David Sparks, *
+* Dave Lingwood, Wm. Steinberg *
+*                              *
+* with some subroutines        *
+* Stolen from Apple's monitor  *
+*                              *
+* Updated and with a search    *
+* routine by Greg Kielian      *
+*                              *
+* Disassembler module modified *
+* to run under ProDOS 1-2-84   *
+* by David Sparks.             *
+*                              *
+* Original first appeared in:  *
+* Call -A.P.P.L.E. : Oct. 1982 *
+* Re-published 2020 KFEST      *
+*                              *
+ REP 32
+ SKP 3
+STADR EQU $1A
+NDADR EQU $1C
+CSWL EQU $36 
+PCL EQU $3A
+LINNUM EQU $50
+FRETOP EQU $6F
+VARPNT EQU $83
+VECTOUT EQU $BE30
+GETBUFR EQU $BEF5
+PTRGET EQU $DFE3
+CHKSTR EQU $DD6C
+SYNCHR EQU $DEC0
+GETSPA EQU $E452
+MOVSTR EQU $E5E2
+INSTDSP EQU $F8D0
+PRNTYX EQU $F940
+PCADJ EQU $F953
+PRBYTE EQU $FDDA
+COUT EQU $FDED
+*
+*
+*
+ ORG $9700
+*
+*
+*
+NEWLINE LDY STADR+1 ;Get start
+ LDX STADR ;address
+ LDA #$8D ;and c/r
+ JSR COUT ;Print c/r
+ JSR PRNTYX ;Print address
+ LDY #0 ;Initialize
+ STY FLAG ;Flag
+ LDX #$07 ;and counter
+ LDA #$BA ;":" CHAR 
+ JSR COUT ;Print colon
+DATAOUT LDA #$A0
+ JSR COUT ;Print space
+ LDA (STADR),Y ;Get byte
+ STA BUF,X ;Park in buffer
+ DEX  ;Keep count
+ JSR PRBYTE ;Output byte
+ LDA STADR ;Check to
+ CMP NDADR ;see if
+ LDA STADR+1 ;start < end
+ SBC NDADR+1
+ BLT NXTBYTE ;Only continue if less than
+ INC FLAG ;Flag >= result
+ BNE SPACEOUT ;Halt output of bytes
+NXTBYTE INC STADR ;Bump start
+ BNE MOD8CHK
+ INC STADR+1
+MOD8CHK LDA STADR
+ AND #$07
+ BNE DATAOUT ;Not done with line yet
+SPACEOUT TXA  ;Check counter
+ BMI ASCIDUMP ;Skip if 8 bytes outputted
+ LDA #$A0
+PUTSPA JSR COUT ;Print
+ JSR COUT ;three
+ JSR COUT ;spaces
+ STA BUF,X ;and pad buffer
+ DEX  ;Repeat
+ BPL PUTSPA ;until x is negative
+*
+ASCIDUMP LDA #$A0 ;Output a space
+ JSR COUT
+ LDX #$07 ;Counter
+ LDA ASCFLAG
+ BNE NOASC
+ASC LDA BUF,X ;Get byte
+ ORA #$80 ;Make it legal
+ CMP #$A0
+ BGE NOTCTRL
+ CMP #$80
+ BEQ NULL
+ AND #$7F
+ BIT $C01E
+ BPL NOTCTRL
+ ORA #$40
+ BNE NOTCTRL
+NULL LDA #$AE ;Replace @ with .
+NOTCTRL JSR COUT ;Print legal byte
+ DEX  ;Repeat 8 times
+ BPL ASC
+NOASC LDA FLAG ;Check flag
+ BNE DONE ;Repeat if clear
+ JMP NEWLINE
+DONE RTS ;else all done
+ RTS  ;else all done
+*
+* The disassembler module calls a monitor
+* routine which uses PCL ($3A).  The disk
+* driver routines of the ProDOS Machine
+* Language Interface also use that address
+* and do not restore it.
+*
+* To deal with the conflict, the disassembly
+* line is now output to a memory buffer,
+* an Applesoft string variable descriptor
+* is "pointed" to the buffer, and the 
+* Applesoft program then writes the string
+* to disk.  This way the disk driver routines
+* are never called during output of a 
+* line of disassembly.
+*
+* Thanks to Ken Kashmarek for the idea.
+*
+*
+* CHECK SYNTAX AND LOCATE STRING POINTER
+*
+DISSAM LDA #$E4 
+ JSR SYNCHR ;IS IT STR$ TOKEN?
+ JSR PTRGET ;FIND VARIABLE
+ JSR CHKSTR ;BE SURE IT'S A STRING
+ STA STRPTR
+ STY STRPTR+1 ;SAVE POINTER TO STRING DESCRIPTOR
+*
+* SAVE MONITOR AND SYSTEM OUTPUT ADDRESSES
+*
+ LDA CSWL
+ STA CSAVE ;SAVE ZERO PAGE OUTPUT POINTER 
+ LDA CSWL+1
+ STA CSAVE+1
+ LDA VECTOUT
+ STA VSAVE ;SAVE SYSTEM OUTPUT POINTER 
+ LDA VECTOUT+1
+ STA VSAVE+1
+*
+* POINT SYSTEM OUTPUT TO OUR ROUTINE
+*
+ LDA #>OUTSTRNG
+ STA VECTOUT
+ LDA #<OUTSTRNG
+ STA VECTOUT+1
+*
+* SET LEN TO ZERO START OF BUF, THEN CALL MONITOR 
+*
+ LDA STADR
+ STA PCL
+ LDA STADR+1
+ STA PCL+1
+ LDA #$0
+ STA LEN
+ JSR INSTDSP ;OUTPUT A LINE OF DISASSEMBLY
+*
+* CALL PCADJ TO UPDATE POINTER TO NEXT MNEMONIC
+*
+UPDATE JSR PCADJ ;RETURNS POINTER IN Y,A
+ STA STADR
+ STY STADR+1
+*
+* SEND A CARRIAGE RETURN BECAUSE INSTDSP DIDN'T
+*
+ LDA #$8D
+ JMP COUT ;EXIT THROUGH COUT
+*
+* CLEANUP DETACHES ROUTINE
+* AND RESTORES SYSTEM OUTPUT TO NORMAL
+*
+* RESTORE CSWL, VECTOUT AND VARPNT 
+*
+CLEANUP LDA STRPTR
+ STA VARPNT
+ LDA STRPTR+1
+ STA VARPNT+1
+ LDA CSAVE
+ STA CSWL
+ LDA CSAVE+1
+ STA CSWL+1
+ LDA VSAVE
+ STA VECTOUT
+ LDA VSAVE+1
+ STA VECTOUT+1
+*
+* POP ADDRESS OFF THE STACK
+*
+ PLA
+ PLA
+*
+* POINT DESCRIPTOR TO BUF
+*
+ LDY #$0
+ LDA LEN
+ STA (VARPNT),Y
+ INY
+ LDA #>BUF
+ STA (VARPNT),Y
+ INY
+ LDA #<BUF
+ STA (VARPNT),Y
+*
+* RETURN WITH C/R IN ACCUMULATOR
+*
+ LDX XSAVE ;RESTORE X-REG
+ LDA #$8D
+ RTS
+*
+* ROUTINE TO CAPTURE SYSTEM OUTPUT IN A STRING
+*
+OUTSTRNG STX XSAVE ;SAVE X-REG FOR SYSTEM
+ AND #$7F ;TURN OFF HIGH BIT
+ CMP #$0D ;IS IT C/R?
+ BNE NOTCR ;NO, PUT IN BUFFER 
+ LDA LEN ;TEST LENGTH
+ BNE CLEANUP ;OK TO QUIT IF SOMETHING IN BUFFER
+ BEQ GETMORE ;DON'T ALLOW NULL STRING TO BE RETURNED
+NOTCR LDX LEN ;GET LENGTH BYTE
+ STA BUF,X ;STORE IN BUFFER
+ INC LEN ;MAKE LENGTH LONGER
+GETMORE LDX XSAVE ;RESTORE X-REG AND GO
+ RTS  ;BACK TO CALLER
+*
+*
+*
+*  Here's Greg's FIND routine
+*
+FINDADD LDY BUF+1 ;BASIC enters here for find
+ LDX BUF ;Print address searching for
+ JSR PRNTYX
+ LDA #$BA ;":" character 
+ JSR COUT
+ LDA #$8D
+ JSR COUT
+NEWLN LDA #$0
+ STA PRTCNT ;Reset print count
+NEWADD LDY #$0
+ LDA (STADR),Y
+ CMP BUF ;First byte match?
+ BNE NXTADR
+ INY ;If it does, try next byte
+ LDA (STADR),Y
+ CMP BUF+1 ;Second byte match?
+ BNE NXTADR
+ LDY STADR+1 ;If both match,
+ LDX STADR ;print address
+ LDA #$A0 ;(ASCII space)
+ JSR COUT
+ JSR PRNTYX
+ INC PRTCNT
+NXTADR LDA STADR ;Check to see if
+ CMP NDADR ;start < end
+ LDA STADR+1
+ SBC NDADR+1
+ BCC MORE
+EXIT LDA #$8D
+ JSR COUT
+ RTS
+MORE INC STADR ;Bump start
+ BNE SAMEPG
+ INC STADR+1
+SAMEPG LDA PRTCNT ;Is current line full?
+ CMP #15 ;Max. of 15 addresses per line
+ BCC NEWADD
+ LDA #$8D
+ JSR COUT ;Next line
+ SEC
+ BCS NEWLN
+*
+*  A LITTLE ROUTINE TO PROTECT
+*  THIS CODE IN THE MLI BITMAP
+*  AND TO RESERVE ITS SPACE
+*  ABOVE HIMEM IN BASIC.SYSTEM
+*
+PROTECT LDA #$03 
+ JSR GETBUFR
+ BCC OK
+ BRK
+OK LDA #$01 
+ ORA $BF6A
+ STA $BF6A
+ LDA #$C0
+ ORA $BF6B
+ STA $BF6B ;PROTECT PAGES IN BIT MAP
+ RTS
+*
+* ROUTINE SCRATCH STORAGE AREA
+*
+STRPTR DS 2,0
+CSAVE DS 2,0
+VSAVE DS 2,0
+XSAVE DS 1,0
+PRTCNT DS 1,0
+FLAG DS 1,0
+ASCFLAG DS 1,0
+LEN DS 1,0
+BUF EQU *
