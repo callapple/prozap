@@ -1,0 +1,31 @@
+ProZAP Introduction
+
+
+     Welcome to ProZAP, one of the first software tools to be offered for 
+Apple Computer's new ProDOS operating system.  ProZAP is your key to unlock 
+many of the mysteries of the Apple disk directories, files and programs.  
+You will use it to follow your Apple's footsteps along the ProDOS Pathname 
+until you find where it put your information.
+
+     You can simply take a tour of a disk to see what's there, or you can
+actually change the data.  Therefore be warned:  IT IS POSSIBLE TO DESTROY
+VALUABLE DATA, AND EVEN TO MAKE PART OR ALL OF A DISK COMPELTELY UNREADABLE.
+COPY BEFOREHAND ANY DISK ON WHICH YOU PLAN TO USE THIS PROGRAM.  NO
+EXCEPTIONS.  NEITHER THE AUTHORS NOR APPLE PUGETSOUND PROGRAM LIBRARY
+EXCHANGE WILL BE RESPONSIBLE FOR ANY DAMAGES OR LOSS ARISING FROM THE USE OR
+MISUSE OF THIS PROGRAM.  WE REPEAT:  DON'T MUCK IT UP -- BACK IT UP!
+
+     ProDOS handles many different types of files, including a number which 
+are only used on the Apple III.  ProZAP opens them all to your inquiring 
+mind.  This document offers a brief tutorial, including a hunt through the 
+directory for the "key block" to a text file containing these very words.  
+You'll know a lot more about both ProZAP and ProDOS when you're reading this 
+message on your computer screen.
+
+     The documentation also includes a quick reference card, and a thorough
+reference section covering each command individually.  But try
+the tutorial first.  Copy this disk, and use the copy.  Do it now.
+
+     There!  That wasn't so difficult, was it?And now you know just about
+everything you need in order to use ProZAP.  Oh yes, the secret message is:
+   ***   ENJOY!   ***
