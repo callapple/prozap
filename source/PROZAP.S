@@ -9,7 +9,7 @@
 	mx	%11
 	org	$2000
 	typ	SYS
-	dsk	ProZAP.System
+	dsk	ProZAP
 	lst	off
 
 *----------------------------
